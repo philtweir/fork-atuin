@@ -122,6 +122,12 @@
 ## amount of commands in your history.
 # show_help = true
 
+## Configure whether or not the tabs row may be hidden, which includes the current Atuin
+## tab, such as Search or Inspector, and other tabs you may wish to see. This will
+## only be hidden if there is likely not space to be useful, and does not affect the use
+## of keyboard shortcuts to switch tab.
+# always_show_tabs = true
+
 ## Defaults to true. This matches history against a set of default regex, and will not save it if we get a match. Defaults include
 ## 1. AWS key id
 ## 2. Github pat (old and new)

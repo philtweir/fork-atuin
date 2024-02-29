@@ -500,6 +500,9 @@ impl State {
             1
         };
         let show_help = settings.show_help && (!compact || f.size().height > 1);
+        // This is an OR, as it seems more likely for someone to wish to override
+        // tabs unexpectedly being missed, than unexpectedly present.
+        let show_tabs = settings.always_show_tabs || (!compact || f.size().height > 10);
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(0)
@@ -510,13 +513,13 @@ impl State {
                         Constraint::Length(1 + border_size),               // input
                         Constraint::Min(1),                                // results list
                         Constraint::Length(preview_height),                // preview
-                        Constraint::Length(1),                             // tabs
+                        Constraint::Length(if show_tabs { 1 } else { 0 }), // tabs
                         Constraint::Length(if show_help { 1 } else { 0 }), // header (sic)
                     ]
                 } else {
                     [
                         Constraint::Length(if show_help { 1 } else { 0 }), // header
-                        Constraint::Length(1),                             // tabs
+                        Constraint::Length(if show_tabs { 1 } else { 0 }), // tabs
                         Constraint::Min(1),                                // results list
                         Constraint::Length(1 + border_size),               // input
                         Constraint::Length(preview_height),                // preview
@@ -537,13 +540,15 @@ impl State {
         // also allocate less 🙈
         let titles = TAB_TITLES.iter().copied().map(Line::from).collect();
 
-        let tabs = Tabs::new(titles)
-            .block(Block::default().borders(Borders::NONE))
-            .select(self.tab_index)
-            .style(Style::default())
-            .highlight_style(Style::default().bold().white().on_black());
+        if show_tabs {
+            let tabs = Tabs::new(titles)
+                .block(Block::default().borders(Borders::NONE))
+                .select(self.tab_index)
+                .style(Style::default())
+                .highlight_style(Style::default().bold().white().on_black());
 
-        f.render_widget(tabs, tabs_chunk);
+            f.render_widget(tabs, tabs_chunk);
+        }
 
         let style = StyleState {
             compact,
