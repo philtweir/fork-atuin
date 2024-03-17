@@ -66,14 +66,18 @@ pub struct InspectingState {
 impl InspectingState {
     pub fn to_previous(&mut self) {
         let previous = self.previous_id.clone();
-        self.reset();
-        self.current_id = previous;
+        if previous.is_some() {
+            self.reset();
+            self.current_id = previous;
+        }
     }
 
     pub fn to_next(&mut self) {
         let next = self.next_id.clone();
-        self.reset();
-        self.current_id = next;
+        if next.is_some() {
+            self.reset();
+            self.current_id = next;
+        }
     }
 
     pub fn reset(&mut self) {
@@ -702,12 +706,14 @@ impl State {
                         Some(inspecting) => inspecting,
                         None => &results[self.results_state.selected()]
                     };
+                    let focus = &results[self.results_state.selected()];
                     super::inspector::draw(
                         f,
                         results_list_chunk,
                         inspecting,
                         &stats.expect("Drawing inspector, but no stats"),
-                        &settings
+                        &settings,
+                        focus
                     );
                 }
 

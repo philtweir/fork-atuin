@@ -28,7 +28,52 @@ fn u64_or_zero(num: i64) -> u64 {
     }
 }
 
-pub fn draw_commands(f: &mut Frame<'_>, parent: Rect, history: &History, stats: &HistoryStats, compact: bool) {
+fn command_time_diff(command_a: &History, command_b: &History) -> String {
+    format![
+        "{:+.0}h{}m{}",
+        ((command_a.timestamp - command_b.timestamp).whole_seconds() as f32) / 3600.,
+        ((command_a.timestamp - command_b.timestamp).whole_seconds() / 60).abs() % 60,
+        ((command_a.timestamp - command_b.timestamp).whole_seconds() % 60).abs(),
+    ]
+}
+fn layout_command_block<'a>(f: &mut Frame<'a>, compact: bool, parent: Rect, superscript: Paragraph, body: Paragraph) -> Block<'a> {
+    let command = if compact {
+        Block::new()
+            .borders(Borders::NONE)
+    } else {
+        Block::new()
+            .borders(Borders::ALL)
+            .title("Previous command")
+            .padding(Padding::horizontal(1))
+    };
+    let command_layout = Layout::default()
+        .direction(if compact { Direction::Horizontal } else { Direction::Vertical })
+        .constraints(
+            [
+                Constraint::Length(if compact { 10 } else { 1 }),
+                Constraint::Min(0),
+            ]
+        )
+        .split(command.inner(parent));
+    f.render_widget(superscript, command_layout[0]);
+    f.render_widget(body, command_layout[1]);
+    command
+}
+
+pub fn draw_commands(f: &mut Frame<'_>, parent: Rect, history: &History, stats: &HistoryStats, focus: &History, compact: bool) {
+    let help = Paragraph::new(Text::from(Span::styled(
+        format!("[Up/Down to step through session by timestamp]"),
+        Style::default().add_modifier(Modifier::BOLD).fg(Color::Blue),
+    )));
+    let commands_block = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(
+            [
+                Constraint::Length(1),
+                Constraint::Min(0),
+            ]
+        )
+        .split(parent);
     let commands = Layout::default()
         .direction(if compact { Direction::Vertical } else { Direction::Horizontal })
         .constraints(
@@ -46,64 +91,73 @@ pub fn draw_commands(f: &mut Frame<'_>, parent: Rect, history: &History, stats: 
                 ]
             }
         )
-        .split(parent);
+        .split(commands_block[1]);
 
-    let command = Paragraph::new(
-        Text::from(Span::styled(
-            history.command.clone(),
-            Style::default().add_modifier(Modifier::BOLD).fg(Color::White),
-        ))
-    ).block(
-        if compact {
-            Block::new()
-                .borders(Borders::NONE)
-        } else {
-            Block::new()
-                .borders(Borders::ALL)
-                .title("Command")
-                .padding(Padding::horizontal(1))
-        }
-    );
-
-    let previous = Paragraph::new(
-        stats
-            .previous
+    [(&stats.previous, 0), (&stats.next, 2)].iter().for_each(|(command, loc)| {
+        let time_offset = (*command)
             .clone()
-            .map_or("[No previous command]".to_string(), |prev| prev.command),
-    )
-    .block(
-        if compact {
-            Block::new()
-                .borders(Borders::NONE)
-        } else {
-            Block::new()
-                .borders(Borders::ALL)
-                .title("Previous command")
-                .padding(Padding::horizontal(1))
-        }
-    );
-
-    let next = Paragraph::new(
-        stats
-            .next
+            .map_or(
+                Paragraph::new(
+                    "~".to_string()
+                ).style(Style::default().fg(Color::DarkGray)),
+                |command: History| Paragraph::new(
+                    if compact {
+                        command_time_diff(&command, history)
+                    } else {
+                        format![
+                            "{} ({})",
+                            command_time_diff(&command, history),
+                            command_time_diff(&command, focus)
+                        ]
+                    }
+                ).style(Style::default().fg(Color::DarkGray)),
+            );
+        let text = (*command)
             .clone()
-            .map_or("[No next command]".to_string(), |next| next.command),
-    )
-    .block(
-        if compact {
-            Block::new()
-                .borders(Borders::NONE)
-        } else {
-            Block::new()
-                .borders(Borders::ALL)
-                .title("Next command")
-                .padding(Padding::horizontal(1))
-            }
-    );
+            .map_or(
+                Paragraph::new(
+                    "[No previous command]".to_string()
+                ).style(Style::default().fg(Color::DarkGray)),
+                |prev| Paragraph::new(prev.command)
+            );
+        let command_block = layout_command_block(f, compact, commands[*loc], time_offset, text);
+        f.render_widget(command_block, commands[*loc]);
+    });
 
-    f.render_widget(previous, commands[0]);
+    let focus_command = if focus == history {
+        Paragraph::new("-")
+    } else {
+        if compact {
+            Paragraph::new("|")
+        } else {
+            Paragraph::new(
+                format![
+                    "({} from inspected command: {})",
+                    command_time_diff(history, focus),
+                    focus.command,
+                ]
+            )
+        }
+    }.style(Style::default().fg(Color::DarkGray));
+    let text = if compact {
+        Paragraph::new(
+            Text::from(Span::styled(
+                history.command.clone(),
+                Style::default().add_modifier(Modifier::BOLD).fg(Color::White),
+            ))
+        )
+    } else {
+        Paragraph::new(
+            Text::from(Span::styled(
+                history.command.clone(),
+                Style::default().add_modifier(Modifier::BOLD).fg(Color::White),
+            ))
+        )
+    };
+    let command = layout_command_block(f, compact, commands[1], focus_command, text);
+
+    f.render_widget(help, commands_block[0]);
     f.render_widget(command, commands[1]);
-    f.render_widget(next, commands[2]);
 }
 
 pub fn draw_stats_table(f: &mut Frame<'_>, parent: Rect, history: &History, stats: &HistoryStats) {
@@ -257,7 +311,7 @@ fn draw_stats_charts(f: &mut Frame<'_>, parent: Rect, stats: &HistoryStats) {
     f.render_widget(duration_over_time, layout[2]);
 }
 
-pub fn draw(f: &mut Frame<'_>, chunk: Rect, history: &History, stats: &HistoryStats, settings: &Settings) {
+pub fn draw(f: &mut Frame<'_>, chunk: Rect, history: &History, stats: &HistoryStats, settings: &Settings, focus: &History) {
     let compact = match settings.style {
         atuin_client::settings::Style::Auto => f.size().height < 14,
         atuin_client::settings::Style::Compact => true,
@@ -265,17 +319,17 @@ pub fn draw(f: &mut Frame<'_>, chunk: Rect, history: &History, stats: &HistorySt
     };
 
     if compact {
-        draw_compact(f, chunk, history, stats)
+        draw_compact(f, chunk, history, stats, focus)
     } else {
-        draw_full(f, chunk, history, stats)
+        draw_full(f, chunk, history, stats, focus)
     }
 }
 
-pub fn draw_compact(f: &mut Frame<'_>, chunk: Rect, history: &History, stats: &HistoryStats) {
-    draw_commands(f, chunk, history, stats, true);
+pub fn draw_compact(f: &mut Frame<'_>, chunk: Rect, history: &History, stats: &HistoryStats, focus: &History) {
+    draw_commands(f, chunk, history, stats, focus, true);
 }
 
-pub fn draw_full(f: &mut Frame<'_>, chunk: Rect, history: &History, stats: &HistoryStats) {
+pub fn draw_full(f: &mut Frame<'_>, chunk: Rect, history: &History, stats: &HistoryStats, focus: &History) {
     let vert_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Ratio(1, 5), Constraint::Ratio(4, 5)])
@@ -286,7 +340,7 @@ pub fn draw_full(f: &mut Frame<'_>, chunk: Rect, history: &History, stats: &Hist
         .constraints([Constraint::Ratio(1, 3), Constraint::Ratio(2, 3)])
         .split(vert_layout[1]);
 
-    draw_commands(f, vert_layout[0], history, stats, false);
+    draw_commands(f, vert_layout[0], history, stats, focus, false);
     draw_stats_table(f, stats_layout[0], history, stats);
     draw_stats_charts(f, stats_layout[1], stats);
 }
