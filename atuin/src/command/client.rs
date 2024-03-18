@@ -23,6 +23,7 @@ mod kv;
 mod search;
 mod stats;
 mod store;
+mod theme;
 
 #[derive(Subcommand, Debug)]
 #[command(infer_subcommands = true)]
@@ -101,6 +102,8 @@ impl Cmd {
 
         let db = Sqlite::new(db_path, settings.local_timeout).await?;
         let sqlite_store = SqliteStore::new(record_store_path, settings.local_timeout).await?;
+
+        let theme = theme::load_theme(settings.theme);
 
         match self {
             Self::History(history) => history.run(&settings, &db, sqlite_store).await,
