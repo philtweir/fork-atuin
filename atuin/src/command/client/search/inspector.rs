@@ -36,14 +36,14 @@ fn command_time_diff(command_a: &History, command_b: &History) -> String {
         ((command_a.timestamp - command_b.timestamp).whole_seconds() % 60).abs(),
     ]
 }
-fn layout_command_block<'a>(f: &mut Frame<'a>, compact: bool, parent: Rect, superscript: Paragraph, body: Paragraph) -> Block<'a> {
+fn layout_command_block<'a>(f: &mut Frame<'a>, compact: bool, title: String, parent: Rect, superscript: Paragraph, body: Paragraph) -> Block<'a> {
     let command = if compact {
         Block::new()
             .borders(Borders::NONE)
     } else {
         Block::new()
             .borders(Borders::ALL)
-            .title("Previous command")
+            .title(title)
             .padding(Padding::horizontal(1))
     };
     let command_layout = Layout::default()
@@ -93,7 +93,7 @@ pub fn draw_commands(f: &mut Frame<'_>, parent: Rect, history: &History, stats: 
         )
         .split(commands_block[1]);
 
-    [(&stats.previous, 0), (&stats.next, 2)].iter().for_each(|(command, loc)| {
+    [("Previous command", &stats.previous, 0), ("Next command", &stats.next, 2)].iter().for_each(|(title, command, loc)| {
         let time_offset = (*command)
             .clone()
             .map_or(
@@ -120,7 +120,7 @@ pub fn draw_commands(f: &mut Frame<'_>, parent: Rect, history: &History, stats: 
                 ).style(Style::default().fg(Color::DarkGray)),
                 |prev| Paragraph::new(prev.command)
             );
-        let command_block = layout_command_block(f, compact, commands[*loc], time_offset, text);
+        let command_block = layout_command_block(f, compact, title.to_string(), commands[*loc], time_offset, text);
         f.render_widget(command_block, commands[*loc]);
     });
 
@@ -154,7 +154,7 @@ pub fn draw_commands(f: &mut Frame<'_>, parent: Rect, history: &History, stats: 
             ))
         )
     };
-    let command = layout_command_block(f, compact, commands[1], focus_command, text);
+    let command = layout_command_block(f, compact, "Command".to_string(), commands[1], focus_command, text);
 
     f.render_widget(help, commands_block[0]);
     f.render_widget(command, commands[1]);
