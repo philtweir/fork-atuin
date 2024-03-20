@@ -5,12 +5,13 @@ use atuin_common::utils::Escapable as _;
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     widgets::{Block, StatefulWidget, Widget},
 };
 use time::OffsetDateTime;
 
 use super::duration::format_duration;
+use crate::command::client::theme::{Theme, Meaning, Level};
 
 pub struct HistoryList<'a> {
     history: &'a [History],
@@ -19,6 +20,7 @@ pub struct HistoryList<'a> {
     /// Apply an alternative highlighting to the selected row
     alternate_highlight: bool,
     now: &'a dyn Fn() -> OffsetDateTime,
+    theme: &'a Theme,
 }
 
 #[derive(Default)]
@@ -70,6 +72,7 @@ impl<'a> StatefulWidget for HistoryList<'a> {
             inverted: self.inverted,
             alternate_highlight: self.alternate_highlight,
             now: &self.now,
+            theme: self.theme
         };
 
         for item in self.history.iter().skip(state.offset).take(end - start) {
@@ -91,6 +94,7 @@ impl<'a> HistoryList<'a> {
         inverted: bool,
         alternate_highlight: bool,
         now: &'a dyn Fn() -> OffsetDateTime,
+        theme: &'a Theme
     ) -> Self {
         Self {
             history,
@@ -98,6 +102,7 @@ impl<'a> HistoryList<'a> {
             inverted,
             alternate_highlight,
             now,
+            theme,
         }
     }
 
@@ -130,6 +135,7 @@ struct DrawState<'a> {
     inverted: bool,
     alternate_highlight: bool,
     now: &'a dyn Fn() -> OffsetDateTime,
+    theme: &'a Theme,
 }
 
 // longest line prefix I could come up with
@@ -151,10 +157,10 @@ impl DrawState<'_> {
     }
 
     fn duration(&mut self, h: &History) {
-        let status = Style::default().fg(if h.success() {
-            Color::Green
+        let status = self.theme.as_style(if h.success() {
+            Meaning::Alert { severity: Level::Info }
         } else {
-            Color::Red
+            Meaning::Alert { severity: Level::Error }
         });
         let duration = Duration::from_nanos(u64::try_from(h.duration).unwrap_or(0));
         self.draw(&format_duration(duration), status);
@@ -162,7 +168,7 @@ impl DrawState<'_> {
 
     #[allow(clippy::cast_possible_truncation)] // we know that time.len() will be <6
     fn time(&mut self, h: &History) {
-        let style = Style::default().fg(Color::Blue);
+        let style = self.theme.as_style(Meaning::Guidance);
 
         // Account for the chance that h.timestamp is "in the future"
         // This would mean that "since" is negative, and the unwrap here
@@ -183,11 +189,11 @@ impl DrawState<'_> {
     }
 
     fn command(&mut self, h: &History) {
-        let mut style = Style::default();
+        let mut style = self.theme.as_style(Meaning::Base);
         if !self.alternate_highlight && (self.y as usize + self.state.offset == self.state.selected)
         {
             // if not applying alternative highlighting to the whole row, color the command
-            style = style.fg(Color::Red).add_modifier(Modifier::BOLD);
+            style = self.theme.as_style(Meaning::Alert { severity: Level::Error }).add_modifier(Modifier::BOLD);
         }
 
         for section in h.command.escape_control().split_ascii_whitespace() {

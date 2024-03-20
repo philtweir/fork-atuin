@@ -12,6 +12,7 @@ use atuin_client::{
 };
 use time::{Duration, OffsetDateTime, Time};
 use unicode_segmentation::UnicodeSegmentation;
+use crate::command::client::theme::Theme;
 
 #[derive(Parser, Debug)]
 #[command(infer_subcommands = true)]
@@ -72,6 +73,7 @@ fn compute_stats(
     history: &[History],
     count: usize,
     ngram_size: usize,
+    theme: &Theme,
 ) -> (usize, usize) {
     let mut commands = HashSet::<&str>::with_capacity(history.len());
     let mut total_unignored = 0;
@@ -133,13 +135,13 @@ fn compute_stats(
 
         let in_ten = 10 * count / max;
         print!("[");
-        print!("{}", SetForegroundColor(Color::Red));
+        print!("{}", SetForegroundColor(theme.get_error().into()));
         for i in 0..in_ten {
             if i == 2 {
-                print!("{}", SetForegroundColor(Color::Yellow));
+                print!("{}", SetForegroundColor(theme.get_warning().into()));
             }
             if i == 5 {
-                print!("{}", SetForegroundColor(Color::Green));
+                print!("{}", SetForegroundColor(theme.get_info().into()));
             }
             print!("▮");
         }
@@ -163,7 +165,7 @@ fn compute_stats(
 }
 
 impl Cmd {
-    pub async fn run(&self, db: &impl Database, settings: &Settings) -> Result<()> {
+    pub async fn run(&self, db: &impl Database, settings: &Settings, theme: &Theme) -> Result<()> {
         let context = current_context();
         let words = if self.period.is_empty() {
             String::from("all")
@@ -197,7 +199,7 @@ impl Cmd {
             let end = start + Duration::days(1);
             db.range(start, end).await?
         };
-        compute_stats(settings, &history, self.count, self.ngram_size);
+        compute_stats(settings, &history, self.count, self.ngram_size, theme);
         Ok(())
     }
 }

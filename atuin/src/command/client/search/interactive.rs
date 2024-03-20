@@ -32,6 +32,7 @@ use super::{
 };
 
 use crate::{command::client::search::engines, VERSION};
+use crate::command::client::theme::Theme;
 
 use ratatui::{
     backend::CrosstermBackend,
@@ -575,6 +576,7 @@ impl State {
         stats: Option<HistoryStats>,
         inspecting: Option<&History>,
         settings: &Settings,
+        theme: &Theme,
     ) {
         let compact = match settings.style {
             atuin_client::settings::Style::Auto => f.size().height < 14,
@@ -611,7 +613,7 @@ impl State {
             .direction(Direction::Vertical)
             .margin(0)
             .horizontal_margin(1)
-            .constraints(
+            .constraints::<&[Constraint]>(
                 if invert {
                     [
                         Constraint::Length(1 + border_size),               // input
@@ -662,7 +664,7 @@ impl State {
 
         let header_chunks = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints(
+            .constraints::<&[Constraint]>(
                 [
                     Constraint::Ratio(1, 5),
                     Constraint::Ratio(3, 5),
@@ -684,7 +686,7 @@ impl State {
         match self.tab_index {
             0 => {
                 let results_list =
-                    Self::build_results_list(style, results, self.keymap_mode, &self.now);
+                    Self::build_results_list(style, results, self.keymap_mode, &self.now, theme);
                 f.render_stateful_widget(results_list, results_list_chunk, &mut self.results_state);
             }
 
@@ -713,7 +715,8 @@ impl State {
                         inspecting,
                         &stats.expect("Drawing inspector, but no stats"),
                         &settings,
-                        focus
+                        focus,
+                        theme
                     );
                 }
 
@@ -817,12 +820,14 @@ impl State {
         results: &'a [History],
         keymap_mode: KeymapMode,
         now: &'a dyn Fn() -> OffsetDateTime,
+        theme: &'a Theme
     ) -> HistoryList<'a> {
         let results_list = HistoryList::new(
             results,
             style.invert,
             keymap_mode == KeymapMode::VimNormal,
             now,
+            theme,
         );
 
         if style.compact {
@@ -987,6 +992,7 @@ pub async fn history(
     settings: &Settings,
     mut db: impl Database,
     history_store: &HistoryStore,
+    theme: &Theme,
 ) -> Result<String> {
     let stdout = Stdout::new(settings.inline_height > 0)?;
     let backend = CrosstermBackend::new(stdout);
@@ -1065,7 +1071,7 @@ pub async fn history(
     let mut inspecting: Option<History> = None;
     let accept;
     let result = 'render: loop {
-        terminal.draw(|f| app.draw(f, &results, stats.clone(), inspecting.as_ref(), settings))?;
+        terminal.draw(|f| app.draw(f, &results, stats.clone(), inspecting.as_ref(), settings, theme))?;
 
         let initial_input = app.search.input.as_str().to_owned();
         let initial_filter_mode = app.search.filter_mode;
@@ -1100,7 +1106,7 @@ pub async fn history(
                             },
                             InputAction::Redraw => {
                                 terminal.clear()?;
-                                terminal.draw(|f| app.draw(f, &results, stats.clone(), inspecting.as_ref(), settings))?;
+                                terminal.draw(|f| app.draw(f, &results, stats.clone(), inspecting.as_ref(), settings, theme))?;
                             },
                             r => {
                                 accept = app.accept;

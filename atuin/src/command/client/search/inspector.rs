@@ -18,6 +18,7 @@ use ratatui::{
 use super::duration::format_duration;
 
 use super::interactive::{InputAction, State};
+use super::super::theme::{Theme, Meaning};
 
 #[allow(clippy::cast_sign_loss)]
 fn u64_or_zero(num: i64) -> u64 {
@@ -60,10 +61,10 @@ fn layout_command_block<'a>(f: &mut Frame<'a>, compact: bool, title: String, par
     command
 }
 
-pub fn draw_commands(f: &mut Frame<'_>, parent: Rect, history: &History, stats: &HistoryStats, focus: &History, compact: bool) {
+pub fn draw_commands(f: &mut Frame<'_>, parent: Rect, history: &History, stats: &HistoryStats, focus: &History, compact: bool, theme: &Theme) {
     let help = Paragraph::new(Text::from(Span::styled(
         format!("[Up/Down to step through session by timestamp]"),
-        Style::default().add_modifier(Modifier::BOLD).fg(Color::Blue),
+        theme.as_style(Meaning::Guidance).add_modifier(Modifier::BOLD),
     )));
     let commands_block = Layout::default()
         .direction(Direction::Vertical)
@@ -311,7 +312,7 @@ fn draw_stats_charts(f: &mut Frame<'_>, parent: Rect, stats: &HistoryStats) {
     f.render_widget(duration_over_time, layout[2]);
 }
 
-pub fn draw(f: &mut Frame<'_>, chunk: Rect, history: &History, stats: &HistoryStats, settings: &Settings, focus: &History) {
+pub fn draw(f: &mut Frame<'_>, chunk: Rect, history: &History, stats: &HistoryStats, settings: &Settings, focus: &History, theme: &Theme) {
     let compact = match settings.style {
         atuin_client::settings::Style::Auto => f.size().height < 14,
         atuin_client::settings::Style::Compact => true,
@@ -319,17 +320,17 @@ pub fn draw(f: &mut Frame<'_>, chunk: Rect, history: &History, stats: &HistorySt
     };
 
     if compact {
-        draw_compact(f, chunk, history, stats, focus)
+        draw_compact(f, chunk, history, stats, focus, theme)
     } else {
-        draw_full(f, chunk, history, stats, focus)
+        draw_full(f, chunk, history, stats, focus, theme)
     }
 }
 
-pub fn draw_compact(f: &mut Frame<'_>, chunk: Rect, history: &History, stats: &HistoryStats, focus: &History) {
-    draw_commands(f, chunk, history, stats, focus, true);
+pub fn draw_compact(f: &mut Frame<'_>, chunk: Rect, history: &History, stats: &HistoryStats, focus: &History, theme: &Theme) {
+    draw_commands(f, chunk, history, stats, focus, true, theme);
 }
 
-pub fn draw_full(f: &mut Frame<'_>, chunk: Rect, history: &History, stats: &HistoryStats, focus: &History) {
+pub fn draw_full(f: &mut Frame<'_>, chunk: Rect, history: &History, stats: &HistoryStats, focus: &History, theme: &Theme) {
     let vert_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Ratio(1, 5), Constraint::Ratio(4, 5)])
@@ -340,7 +341,7 @@ pub fn draw_full(f: &mut Frame<'_>, chunk: Rect, history: &History, stats: &Hist
         .constraints([Constraint::Ratio(1, 3), Constraint::Ratio(2, 3)])
         .split(vert_layout[1]);
 
-    draw_commands(f, vert_layout[0], history, stats, focus, false);
+    draw_commands(f, vert_layout[0], history, stats, focus, false, theme);
     draw_stats_table(f, stats_layout[0], history, stats);
     draw_stats_charts(f, stats_layout[1], stats);
 }

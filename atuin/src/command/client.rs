@@ -103,13 +103,13 @@ impl Cmd {
         let db = Sqlite::new(db_path, settings.local_timeout).await?;
         let sqlite_store = SqliteStore::new(record_store_path, settings.local_timeout).await?;
 
-        let theme = theme::load_theme(settings.theme);
+        let theme = theme::load_theme(settings.theme.as_str());
 
         match self {
             Self::History(history) => history.run(&settings, &db, sqlite_store).await,
             Self::Import(import) => import.run(&db).await,
-            Self::Stats(stats) => stats.run(&db, &settings).await,
-            Self::Search(search) => search.run(db, &mut settings, sqlite_store).await,
+            Self::Stats(stats) => stats.run(&db, &settings, &theme).await,
+            Self::Search(search) => search.run(db, &mut settings, sqlite_store, &theme).await,
 
             #[cfg(feature = "sync")]
             Self::Sync(sync) => sync.run(settings, &db, sqlite_store).await,

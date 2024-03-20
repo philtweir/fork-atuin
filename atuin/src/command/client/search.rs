@@ -22,6 +22,8 @@ mod history_list;
 mod inspector;
 mod interactive;
 
+use crate::command::client::theme::Theme;
+
 pub use duration::format_duration_into;
 
 #[allow(clippy::struct_excessive_bools, clippy::struct_field_names)]
@@ -130,6 +132,7 @@ impl Cmd {
         db: impl Database,
         settings: &mut Settings,
         store: SqliteStore,
+        theme: &Theme,
     ) -> Result<()> {
         let query = self.query.map_or_else(
             || {
@@ -196,7 +199,7 @@ impl Cmd {
         let history_store = HistoryStore::new(store.clone(), host_id, encryption_key);
 
         if self.interactive {
-            let item = interactive::history(&query, settings, db, &history_store).await?;
+            let item = interactive::history(&query, settings, db, &history_store, theme).await?;
             if stderr().is_terminal() {
                 eprintln!("{}", item.escape_control());
             } else {
