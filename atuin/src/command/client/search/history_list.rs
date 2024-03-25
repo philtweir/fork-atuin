@@ -11,7 +11,7 @@ use ratatui::{
 use time::OffsetDateTime;
 
 use super::duration::format_duration;
-use crate::command::client::theme::{Theme, Meaning, Level};
+use crate::command::client::theme::{Theme, Meaning};
 
 pub struct HistoryList<'a> {
     history: &'a [History],
@@ -158,9 +158,9 @@ impl DrawState<'_> {
 
     fn duration(&mut self, h: &History) {
         let status = self.theme.as_style(if h.success() {
-            Meaning::Alert { severity: Level::Info }
+            Meaning::AlertInfo
         } else {
-            Meaning::Alert { severity: Level::Error }
+            Meaning::AlertError
         });
         let duration = Duration::from_nanos(u64::try_from(h.duration).unwrap_or(0));
         self.draw(&format_duration(duration), status);
@@ -193,7 +193,7 @@ impl DrawState<'_> {
         if !self.alternate_highlight && (self.y as usize + self.state.offset == self.state.selected)
         {
             // if not applying alternative highlighting to the whole row, color the command
-            style = self.theme.as_style(Meaning::Alert { severity: Level::Error }).add_modifier(Modifier::BOLD);
+            style = self.theme.as_style(Meaning::AlertError).add_modifier(Modifier::BOLD);
         }
 
         for section in h.command.escape_control().split_ascii_whitespace() {
