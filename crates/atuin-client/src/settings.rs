@@ -600,15 +600,15 @@ impl Settings {
         let id = Settings::read_from_data_dir(HOST_ID_FILENAME);
 
         if let Some(id) = id {
-            let parsed =
-                Uuid::from_str(id.as_str()).expect("failed to parse host ID from local directory");
+            let parsed = Uuid::from_str(id.as_str())
+                .expect(&t!("failed to parse host ID from local directory"));
             return Some(HostId(parsed));
         }
 
         let uuid = atuin_common::utils::uuid_v7();
 
         Settings::save_to_data_dir(HOST_ID_FILENAME, uuid.as_simple().to_string().as_ref())
-            .expect("Could not write host ID to data dir");
+            .expect(&t!("Could not write host ID to data dir"));
 
         Some(HostId(uuid))
     }
@@ -627,7 +627,7 @@ impl Settings {
                 let d = time::Duration::try_from(d)?;
                 Ok(OffsetDateTime::now_utc() - Settings::last_sync()? >= d)
             }
-            Err(e) => Err(eyre!("failed to check sync: {}", e)),
+            Err(e) => Err(eyre!("{}: {}", t!("failed to check sync"), e)),
         }
     }
 
@@ -692,7 +692,7 @@ impl Settings {
             Ok::<(), eyre::Report>(())
         })
         .await
-        .expect("file task panicked")?;
+        .expect(&t!("file task panicked"))?;
 
         Ok(latest)
     }
@@ -868,7 +868,7 @@ impl Settings {
         let config = config_builder.build()?;
         let mut settings: Settings = config
             .try_deserialize()
-            .map_err(|e| eyre!("failed to deserialize: {}", e))?;
+            .map_err(|e| eyre!("{}: {}", t!("failed to deserialize"), e))?;
 
         // all paths should be expanded
         settings.db_path = Self::expand_path(settings.db_path)?;
@@ -905,11 +905,11 @@ impl Default for Settings {
         // if this panics something is very wrong, as the default config
         // does not build or deserialize into the settings struct
         Self::builder()
-            .expect("Could not build default")
+            .expect(&t!("Could not build default"))
             .build()
-            .expect("Could not build config")
+            .expect(&t!("Could not build config"))
             .try_deserialize()
-            .expect("Could not deserialize config")
+            .expect(&t!("Could not deserialize config"))
     }
 }
 

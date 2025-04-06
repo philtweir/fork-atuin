@@ -134,7 +134,7 @@ pub static SECRET_PATTERNS: &[(&str, &str, TestValue)] = &[
 /// The `regex` expressions from [`SECRET_PATTERNS`] compiled into a `RegexSet`.
 pub static SECRET_PATTERNS_RE: LazyLock<RegexSet> = LazyLock::new(|| {
     let exprs = SECRET_PATTERNS.iter().map(|f| f.1);
-    RegexSet::new(exprs).expect("Failed to build secrets regex")
+    RegexSet::new(exprs).expect(&t!("Failed to build secrets regex"))
 });
 
 #[cfg(test)]
@@ -147,17 +147,17 @@ mod tests {
     fn test_secrets() {
         for (name, regex, test) in SECRET_PATTERNS {
             let re =
-                Regex::new(regex).unwrap_or_else(|_| panic!("Failed to compile regex for {name}"));
+                Regex::new(regex).unwrap_or_else(|_| panic!(&t!("Failed to compile regex for {name}", name = t!(name))));
 
             match test {
                 TestValue::Single(test) => {
-                    assert!(re.is_match(test), "{name} test failed!");
+                    assert!(re.is_match(test), "{t!(name)} test failed!");
                 }
                 TestValue::Multiple(tests) => {
                     for test_str in tests.iter() {
                         assert!(
                             re.is_match(test_str),
-                            "{name} test with value \"{test_str}\" failed!"
+                            "{t!(name)} test with value \"{test_str}\" failed!"
                         );
                     }
                 }

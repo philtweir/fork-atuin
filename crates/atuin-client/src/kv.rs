@@ -50,7 +50,7 @@ impl KvRecord {
                 let mut bytes = decode::Bytes::new(&data.0);
 
                 let nfields = decode::read_array_len(&mut bytes).map_err(error_report)?;
-                ensure!(nfields == 3, "too many entries in v0 kv record");
+                ensure!(nfields == 3, t!("too many entries in v0 kv record"));
 
                 let bytes = bytes.remaining_slice();
 
@@ -60,7 +60,7 @@ impl KvRecord {
                 let (value, bytes) = decode::read_str_from_slice(bytes).map_err(error_report)?;
 
                 if !bytes.is_empty() {
-                    bail!("trailing bytes in encoded kvrecord. malformed")
+                    bail!(t!("trailing bytes in encoded kvrecord. malformed"))
                 }
 
                 Ok(KvRecord {
@@ -101,7 +101,10 @@ impl KvRecord {
                 })
             }
             _ => {
-                bail!("unknown version {version:?}")
+                bail!(t!(
+                    "unknown version %{version}",
+                    version = format!("{version:?}")
+                ))
             }
         }
     }
@@ -132,10 +135,10 @@ impl KvStore {
         value: Option<&str>,
     ) -> Result<()> {
         if value.is_some() && value.unwrap().len() > KV_VAL_MAX_LEN {
-            return Err(eyre!(
-                "kv value too large: max len {} bytes",
-                KV_VAL_MAX_LEN
-            ));
+            return Err(eyre!(t!(
+                "kv value too large: max len %{len} bytes",
+                len = KV_VAL_MAX_LEN
+            )));
         }
 
         let record = KvRecord {
@@ -211,7 +214,7 @@ impl KvStore {
         for record in tagged {
             let decrypted = match record.version.as_str() {
                 "v0" | KV_VERSION => record.decrypt::<PASETO_V4>(encryption_key)?,
-                version => bail!("unknown version {version:?}"),
+                version => bail!("{} {version:?}", t!("unknown version"), version = version),
             };
 
             let kv = KvRecord::deserialize(&decrypted.data, &decrypted.version)?;
