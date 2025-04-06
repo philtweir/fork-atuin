@@ -1,0 +1,13 @@
+failed-to-parse-self-semver = failed to parse self semver
+failed-to-get-current-pid = Failed to get current PID
+process-with-current-pid-does-not-exist = Process with current pid does not exist
+atuin-running-with-no-parent = Atuin running with no parent!
+process-with-parent-pid-does-not-exist = Process with parent pid does not exist
+failed-to-get-current-PID = Failed to get current PID
+process-with-current-pid-does-not-exist = Process with current pid does not exist
+atuin-running-with-no-parent = Atuin running with no parent!
+process-with-parent-pid-does-not-exist = Process with parent pid does not exist
+failed-to-generate-random-bytes = Failed to generate random bytes!
+home-not-found = $HOME not found
+not-enough-chars = not enough chars
+unexpected-eof-quotes-do-not-match = unexpected eof, quotes do not match
