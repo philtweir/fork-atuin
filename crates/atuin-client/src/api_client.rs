@@ -21,6 +21,7 @@ use atuin_common::{
     },
     record::RecordStatus,
 };
+use atuin_common::t;
 
 use semver::Version;
 use time::OffsetDateTime;
@@ -127,10 +128,11 @@ pub fn ensure_version(response: &Response) -> Result<bool> {
     // If the client is newer than the server
     if version.major < ATUIN_VERSION.major {
         println!(
-            "Atuin version mismatch! In order to successfully sync, the server needs to run a newer version of Atuin"
+            "{}",
+            t!("Atuin version mismatch! In order to successfully sync, the server needs to run a newer version of Atuin")
         );
-        println!("Client: {}", ATUIN_CARGO_VERSION);
-        println!("Server: {}", version);
+        println!("{}: {}", t!("Client"), ATUIN_CARGO_VERSION);
+        println!("{}: {}", t!("Server"), version);
 
         return Ok(false);
     }
@@ -142,9 +144,9 @@ async fn handle_resp_error(resp: Response) -> Result<Response> {
     let status = resp.status();
 
     if status == StatusCode::SERVICE_UNAVAILABLE {
-        bail!(
+        bail!(t!(
             "Service unavailable: check https://status.atuin.sh (or get in touch with your host)"
-        );
+        ));
     }
 
     if status == StatusCode::TOO_MANY_REQUESTS {
@@ -372,7 +374,7 @@ impl<'a> Client<'a> {
         let resp = self.client.delete(url).send().await?;
 
         if resp.status() == 403 {
-            bail!("invalid login details");
+            bail!(t!("invalid login details"));
         } else if resp.status() == 200 {
             Ok(())
         } else {
@@ -399,9 +401,9 @@ impl<'a> Client<'a> {
             .await?;
 
         if resp.status() == 401 {
-            bail!("current password is incorrect")
+            bail!(t!("current password is incorrect"))
         } else if resp.status() == 403 {
-            bail!("invalid login details");
+            bail!(t!("invalid login details"));
         } else if resp.status() == 200 {
             Ok(())
         } else {

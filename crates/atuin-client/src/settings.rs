@@ -11,6 +11,7 @@ use config::{
 use eyre::{Context, Error, Result, bail, eyre};
 use fs_err::{File, create_dir_all};
 use humantime::parse_duration;
+use lazy_static::lazy_static;
 use regex::RegexSet;
 use semver::Version;
 use serde::{Deserialize, Serialize};
@@ -68,7 +69,7 @@ impl SearchMode {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Copy, PartialEq, Eq, ValueEnum, Serialize)]
+#[derive(Clone, Debug, Deserialize, Copy, PartialEq, Eq, ValueEnum, Serialize, Hash)]
 pub enum FilterMode {
     #[serde(rename = "global")]
     Global = 0,
@@ -86,15 +87,21 @@ pub enum FilterMode {
     Workspace = 4,
 }
 
+lazy_static! {
+    static ref FILTER_MODES: HashMap<FilterMode, String> = {
+        HashMap::from([
+            (FilterMode::Global, t!("GLOBAL").to_owned()),
+            (FilterMode::Host, t!("HOST").to_owned()),
+            (FilterMode::Session, t!("SESSION").to_owned()),
+            (FilterMode::Directory, t!("DIRECTORY").to_owned()),
+            (FilterMode::Workspace, t!("WORKSPACE").to_owned()),
+        ])
+    };
+}
+
 impl FilterMode {
     pub fn as_str(&self) -> &'static str {
-        match self {
-            FilterMode::Global => "GLOBAL",
-            FilterMode::Host => "HOST",
-            FilterMode::Session => "SESSION",
-            FilterMode::Directory => "DIRECTORY",
-            FilterMode::Workspace => "WORKSPACE",
-        }
+        FILTER_MODES.get(self).unwrap().as_str()
     }
 }
 
@@ -520,13 +527,13 @@ pub struct Settings {
 impl Settings {
     pub fn utc() -> Self {
         Self::builder()
-            .expect("Could not build default")
+            .expect(&t!("Could not build default"))
             .set_override("timezone", "0")
-            .expect("failed to override timezone with UTC")
+            .expect(&t!("failed to override timezone with UTC"))
             .build()
-            .expect("Could not build config")
+            .expect(&t!("Could not build config"))
             .try_deserialize()
-            .expect("Could not deserialize config")
+            .expect(&t!("Could not deserialize config"))
     }
 
     fn save_to_data_dir(filename: &str, value: &str) -> Result<()> {
@@ -632,7 +639,7 @@ impl Settings {
 
     pub fn session_token(&self) -> Result<String> {
         if !self.logged_in() {
-            return Err(eyre!("Tried to load session; not logged in"));
+            return Err(eyre!(t!("Tried to load session; not logged in")));
         }
 
         let session_path = self.session_path.as_str();
@@ -818,10 +825,19 @@ impl Settings {
         let config_dir = atuin_common::utils::config_dir();
         let data_dir = atuin_common::utils::data_dir();
 
-        create_dir_all(&config_dir)
-            .wrap_err_with(|| format!("could not create dir {config_dir:?}"))?;
+        create_dir_all(&config_dir).wrap_err_with(|| {
+            t!(
+                "could not create dir %{config_dir}",
+                config_dir = format!("{config_dir:?}")
+            )
+        })?;
 
-        create_dir_all(&data_dir).wrap_err_with(|| format!("could not create dir {data_dir:?}"))?;
+        create_dir_all(&data_dir).wrap_err_with(|| {
+            t!(
+                "could not create dir %{data_dir}",
+                data_dir = format!("{data_dir:?}")
+            )
+        })?;
 
         let mut config_file = if let Ok(p) = std::env::var("ATUIN_CONFIG_DIR") {
             PathBuf::from(p)
@@ -841,9 +857,10 @@ impl Settings {
                 FileFormat::Toml,
             ))
         } else {
-            let mut file = File::create(config_file).wrap_err("could not create config file")?;
+            let mut file =
+                File::create(config_file).wrap_err(t!("could not create config file"))?;
             file.write_all(EXAMPLE_CONFIG.as_bytes())
-                .wrap_err("could not write default config file")?;
+                .wrap_err(t!("could not write default config file"))?;
 
             config_builder
         };

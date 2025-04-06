@@ -3,6 +3,9 @@
 #[macro_use]
 extern crate log;
 
+#[macro_use]
+extern crate atuin_common;
+
 #[cfg(feature = "sync")]
 pub mod api_client;
 #[cfg(feature = "sync")]

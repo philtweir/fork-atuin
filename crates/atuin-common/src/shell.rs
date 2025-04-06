@@ -3,6 +3,7 @@ use std::{ffi::OsStr, path::Path, process::Command};
 use serde::Serialize;
 use sysinfo::{Process, System, get_current_pid};
 use thiserror::Error;
+use crate::i18n::t;
 
 #[derive(PartialEq)]
 pub enum Shell {
@@ -49,12 +50,16 @@ impl Shell {
         let sys = System::new_all();
 
         let process = sys
-            .process(get_current_pid().expect("Failed to get current PID"))
-            .expect("Process with current pid does not exist");
+            .process(get_current_pid().expect(&t!("failed-to-get-current-pid")))
+            .expect(&t!("process-with-current-pid-does-not-exist"));
 
         let parent = sys
-            .process(process.parent().expect("Atuin running with no parent!"))
-            .expect("Process with parent pid does not exist");
+            .process(
+                process
+                    .parent()
+                    .expect(&t!("atuin-running-with-no-parent")),
+            )
+            .expect(&t!("process-with-parent-pid-does-not-exist"));
 
         let shell = parent.name().trim().to_lowercase();
         let shell = shell.strip_prefix('-').unwrap_or(&shell);
@@ -163,11 +168,15 @@ pub fn shell_name(parent: Option<&Process>) -> String {
         parent
     } else {
         let process = sys
-            .process(get_current_pid().expect("Failed to get current PID"))
-            .expect("Process with current pid does not exist");
+            .process(get_current_pid().expect(&t!("failed-to-get-current-pid")))
+            .expect(&t!("process-with-current-pid-does-not-exist"));
 
-        sys.process(process.parent().expect("Atuin running with no parent!"))
-            .expect("Process with parent pid does not exist")
+        sys.process(
+            process
+                .parent()
+                .expect(&t!("atuin-running-with-no-parent")),
+        )
+        .expect(&t!("process-with-parent-pid-does-not-exist"))
     };
 
     let shell = parent.name().trim().to_lowercase();

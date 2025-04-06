@@ -57,7 +57,8 @@ pub struct OptFilters {
 pub fn current_context() -> Context {
     let Ok(session) = env::var("ATUIN_SESSION") else {
         eprintln!(
-            "ERROR: Failed to find $ATUIN_SESSION in the environment. Check that you have correctly set up your shell."
+            "{}",
+            t!("ERROR: Failed to find $ATUIN_SESSION in the environment. Check that you have correctly set up your shell.")
         );
         std::process::exit(1);
     };
